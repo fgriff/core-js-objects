@@ -353,33 +353,169 @@ function group(array, keySelector, valueSelector) {
  *  For more examples see unit tests.
  */
 
+const COUNT_ERROR_MESSAGE =
+  'Element, id and pseudo-element should not occur more then one time inside the selector';
+const ORDER_ERROR_MESSAGE =
+  'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element';
+
+const selectorOrder = {
+  element: 1,
+  id: 2,
+  class: 3,
+  attrs: 4,
+  pseudoClass: 5,
+  pseudoElement: 6,
+};
+
+class Selector {
+  constructor() {
+    this.selectorParts = {
+      element: '',
+      id: '',
+      classes: [],
+      attrs: [],
+      pseudoClasses: [],
+      pseudoElement: '',
+    };
+    this.combinedSelector = '';
+    this.lastAddedSelectorOrder = 0;
+    this.errors = {
+      countError: () => {
+        throw new Error(COUNT_ERROR_MESSAGE);
+      },
+
+      orderError: () => {
+        throw new Error(ORDER_ERROR_MESSAGE);
+      },
+    };
+  }
+
+  element(value) {
+    if (this.selectorParts.element) {
+      this.errors.countError();
+    }
+
+    if (this.lastAddedSelectorOrder > selectorOrder.element) {
+      this.errors.orderError();
+    }
+
+    this.lastAddedSelectorOrder = selectorOrder.element;
+    this.selectorParts.element = value;
+
+    return this;
+  }
+
+  id(value) {
+    if (this.selectorParts.id) {
+      this.errors.countError();
+    }
+
+    if (this.lastAddedSelectorOrder > selectorOrder.id) {
+      this.errors.orderError();
+    }
+
+    this.lastAddedSelectorOrder = selectorOrder.id;
+    this.selectorParts.id = `#${value}`;
+
+    return this;
+  }
+
+  class(value) {
+    if (this.lastAddedSelectorOrder > selectorOrder.class) {
+      this.errors.orderError();
+    }
+
+    this.lastAddedSelectorOrder = selectorOrder.class;
+    this.selectorParts.classes.push(`.${value}`);
+
+    return this;
+  }
+
+  attr(value) {
+    if (this.lastAddedSelectorOrder > selectorOrder.attrs) {
+      this.errors.orderError();
+    }
+
+    this.lastAddedSelectorOrder = selectorOrder.attrs;
+    this.selectorParts.attrs.push(`[${value}]`);
+
+    return this;
+  }
+
+  pseudoClass(value) {
+    if (this.lastAddedSelectorOrder > selectorOrder.pseudoClass) {
+      this.errors.orderError();
+    }
+
+    this.lastAddedSelectorOrder = selectorOrder.pseudoClass;
+    this.selectorParts.pseudoClasses.push(`:${value}`);
+
+    return this;
+  }
+
+  pseudoElement(value) {
+    if (this.selectorParts.pseudoElement) {
+      this.errors.countError();
+    }
+
+    this.lastAddedSelectorOrder = selectorOrder.pseudoElement;
+    this.selectorParts.pseudoElement = `::${value}`;
+
+    return this;
+  }
+
+  combine(selector1, combinator, selector2) {
+    this.combinedSelector = `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
+
+    return this;
+  }
+
+  stringify() {
+    if (this.combinedSelector) {
+      return this.combinedSelector;
+    }
+
+    const { element, id, classes, attrs, pseudoClasses, pseudoElement } =
+      this.selectorParts;
+
+    return (
+      element +
+      id +
+      classes.join('') +
+      attrs.join('') +
+      pseudoClasses.join('') +
+      pseudoElement
+    );
+  }
+}
+
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    return new Selector().element(value);
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    return new Selector().id(value);
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    return new Selector().class(value);
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    return new Selector().attr(value);
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    return new Selector().pseudoClass(value);
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    return new Selector().pseudoElement(value);
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return new Selector().combine(selector1, combinator, selector2);
   },
 };
 
